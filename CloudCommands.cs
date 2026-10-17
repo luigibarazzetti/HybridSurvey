@@ -9,6 +9,9 @@ using Rhino.DocObjects;
 using Command = Rhino.Commands.Command;
 using OpenFileDialog = Eto.Forms.OpenFileDialog;
 using DialogResult = Eto.Forms.DialogResult;
+using Form = Eto.Forms.Form;
+using Label = Eto.Forms.Label;
+using Button = Eto.Forms.Button;
 
 namespace HybridSnap;
 
