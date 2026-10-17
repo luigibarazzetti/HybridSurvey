@@ -7,6 +7,8 @@ using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
 using Command = Rhino.Commands.Command;
+using OpenFileDialog = Eto.Forms.OpenFileDialog;
+using DialogResult = Eto.Forms.DialogResult;
 
 namespace HybridSnap;
 
