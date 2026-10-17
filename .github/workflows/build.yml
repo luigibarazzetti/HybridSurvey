@@ -1,0 +1,45 @@
+
+name: Build HybridSurvey Rhino 8
+
+'on':
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Check renderer dependencies
+        shell: pwsh
+        run: |
+          $required = @('ThirdParty/RhinoGaussianSplatting.dll', 'ThirdParty/WebP.Net.dll', 'ThirdParty/libwebp.dll', 'ThirdParty/libsharpyuv.dll')
+          foreach ($file in $required) {
+            if (-not (Test-Path $file)) { throw "Missing renderer dependency: $file" }
+          }
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build plugin
+        run: dotnet build -c Release --no-restore
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: HybridSurvey-Rhino8
+          path: |
+            **/bin/Release/**/*.rhp
+            **/bin/Release/**/*.dll
+            **/bin/Release/**/*.json
+          if-no-files-found: error
