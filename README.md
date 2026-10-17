@@ -21,3 +21,7 @@ Upload the **contents** of this directory to the repository root, including `.gi
 - Cloud visibility tracking is session-local and based on imported object IDs.
 - Opacity changes rebuild the Gaussian render buffer and may take time on large files; use **Apply Opacity** instead of continuous slider updates.
 - Third-party renderer dependencies require a redistribution/license review before public release.
+
+
+## Native Rhino cloud import update
+`HybridCloudImport` now invokes Rhino native `_-Import` without preselecting the file, so Rhino presents its own file picker and importer-specific options (including E57 when installed). The plugin tracks all newly created document objects, not only PointCloud objects; `HybridCloudShow` toggles those objects. Existing objects remain unchanged. If the importer produces no new Rhino objects, check the Rhino command history.

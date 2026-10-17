@@ -1,46 +1,69 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using Eto.Forms;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
 using Command = Rhino.Commands.Command;
-using OpenFileDialog = Eto.Forms.OpenFileDialog;
-using DialogResult = Eto.Forms.DialogResult;
 
 namespace HybridSnap;
 
-// Only point clouds imported with HybridCloudImport are controlled by HybridCloudShow.
-// Other Rhino geometry and point clouds remain untouched.
+// Tracks objects created by Rhino's native Import command, per document.
+// The import dialog and E57/other file readers are managed entirely by Rhino.
 internal static class ImportedClouds
 {
-    private static readonly HashSet<Guid> Ids = new();
-    internal static bool Visible { get; private set; } = true;
+    private static readonly Dictionary<uint, HashSet<Guid>> ImportedIds = new();
+    private static readonly Dictionary<uint, bool> Visibility = new();
 
-    internal static int Import(RhinoDoc doc, string path)
+    internal static bool Visible
     {
-        if (!File.Exists(path)) throw new FileNotFoundException("Cloud file not found", path);
-        var before = new HashSet<Guid>(doc.Objects.GetObjectList(ObjectType.PointSet).Select(o => o.Id));
-        // Delegate format support to Rhino's installed file importers.
-        // A failed/unsupported import is reported rather than silently claiming success.
-        var escaped = path.Replace("\"", "\"\"");
-        bool ran = RhinoApp.RunScript($"_-Import \"{escaped}\" _Enter", false);
-        var added = doc.Objects.GetObjectList(ObjectType.PointSet)
-            .Where(o => !before.Contains(o.Id)).Select(o => o.Id).ToArray();
-        foreach (var id in added) Ids.Add(id);
-        Visible = true;
+        get
+        {
+            var doc = RhinoDoc.ActiveDoc;
+            return doc == null || !Visibility.TryGetValue(doc.RuntimeSerialNumber, out var value) || value;
+        }
+    }
+
+    internal static int Import(RhinoDoc doc)
+    {
+        var before = new HashSet<Guid>(doc.Objects.GetObjectList(ObjectType.AnyObject).Select(o => o.Id));
+        // Do not supply a filename or an extra Enter: Rhino owns its native
+        // file dialog, importer options and E57 conversion workflow.
+        bool completed = RhinoApp.RunScript("_-Import", false);
+        var added = doc.Objects.GetObjectList(ObjectType.AnyObject)
+            .Where(o => !before.Contains(o.Id))
+            .ToArray();
+
+        if (added.Length == 0)
+        {
+            RhinoApp.WriteLine(completed
+                ? "Rhino Import finished, but no new document objects were detected. Check Rhino's import messages."
+                : "Rhino Import was cancelled or did not complete.");
+            return 0;
+        }
+
+        // Importers may create point clouds, individual points, meshes or
+        // instances. Preserve their original Rhino objects and group the
+        // newly imported objects for Show/Hide without converting geometry.
+        if (!ImportedIds.TryGetValue(doc.RuntimeSerialNumber, out var ids))
+        {
+            ids = new HashSet<Guid>();
+            ImportedIds[doc.RuntimeSerialNumber] = ids;
+        }
+        foreach (var obj in added) ids.Add(obj.Id);
+        Visibility[doc.RuntimeSerialNumber] = true;
+        int pointClouds = added.Count(o => o.ObjectType == ObjectType.PointSet);
+        RhinoApp.WriteLine($"Rhino Import: {added.Length} object(s) added ({pointClouds} point-cloud object(s)).");
+        if (pointClouds == 0)
+            RhinoApp.WriteLine("Note: Rhino imported objects of other types. HybridCloudShow will control these imported objects as well.");
         doc.Views.Redraw();
-        RhinoApp.WriteLine($"Cloud import: {added.Length} point-cloud object(s) added from {Path.GetFileName(path)}.");
-        if (!ran || added.Length == 0)
-            RhinoApp.WriteLine("No point-cloud objects detected. Check that Rhino supports this file format and that it contains a point cloud.");
         return added.Length;
     }
 
     internal static int Toggle(RhinoDoc doc)
     {
-        var objects = Ids.Select(doc.Objects.FindId).Where(o => o != null).ToArray();
+        if (!ImportedIds.TryGetValue(doc.RuntimeSerialNumber, out var ids)) return 0;
+        var objects = ids.Select(doc.Objects.FindId).Where(o => o != null && !o.IsDeleted).ToArray();
         if (objects.Length == 0) return 0;
         bool show = !Visible;
         foreach (var obj in objects)
@@ -49,7 +72,7 @@ internal static class ImportedClouds
             if (show) doc.Objects.Show(obj, true);
             else doc.Objects.Hide(obj, true);
         }
-        Visible = show;
+        Visibility[doc.RuntimeSerialNumber] = show;
         doc.Views.Redraw();
         return objects.Length;
     }
@@ -60,11 +83,7 @@ public sealed class HybridCloudImportCommand : Command
     public override string EnglishName => "HybridCloudImport";
     protected override Result RunCommand(RhinoDoc doc, RunMode mode)
     {
-        var dlg = new OpenFileDialog { Title = "Import point cloud using Rhino" };
-        dlg.Filters.Add(new FileFilter("Point clouds", ".e57", ".las", ".laz", ".ply", ".xyz", ".pts", ".ptx", ".asc", ".txt"));
-        dlg.Filters.Add(new FileFilter("All files", ".*"));
-        if (dlg.ShowDialog(null) != DialogResult.Ok) return Result.Cancel;
-        try { return ImportedClouds.Import(doc, dlg.FileName) > 0 ? Result.Success : Result.Failure; }
+        try { return ImportedClouds.Import(doc) > 0 ? Result.Success : Result.Nothing; }
         catch (Exception ex) { RhinoApp.WriteLine("HybridCloudImport: " + ex.Message); return Result.Failure; }
     }
 }
@@ -77,10 +96,10 @@ public sealed class HybridCloudShowCommand : Command
         int count = ImportedClouds.Toggle(doc);
         if (count == 0)
         {
-            RhinoApp.WriteLine("No imported point clouds to toggle. Use HybridCloudImport first.");
+            RhinoApp.WriteLine("No imported objects to toggle. Use HybridCloudImport first.");
             return Result.Nothing;
         }
-        RhinoApp.WriteLine($"Cloud objects: {count}; visible: {ImportedClouds.Visible}.");
+        RhinoApp.WriteLine($"Imported cloud objects: {count}; visible: {ImportedClouds.Visible}.");
         return Result.Success;
     }
 }
