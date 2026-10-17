@@ -3,6 +3,9 @@ using Eto.Drawing;
 using Eto.Forms;
 using Rhino;
 using Rhino.Commands;
+using Form = Eto.Forms.Form;
+using Label = Eto.Forms.Label;
+using Button = Eto.Forms.Button;
 
 namespace HybridSnap;
 
