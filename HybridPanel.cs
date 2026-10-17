@@ -6,6 +6,11 @@ using Rhino.Commands;
 using Form = Eto.Forms.Form;
 using Label = Eto.Forms.Label;
 using Button = Eto.Forms.Button;
+using Size = Eto.Drawing.Size;
+using Padding = Eto.Drawing.Padding;
+using Font = Eto.Drawing.Font;
+using Orientation = Eto.Forms.Orientation;
+using HorizontalAlignment = Eto.Forms.HorizontalAlignment;
 
 namespace HybridSnap;
 
