@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetExt>.rhp</TargetExt>
+    <AssemblyName>HybridSnap</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="RhinoCommon" Version="8.28.26041.11001" />
+    <PackageReference Include="Eto.Forms" Version="2.8.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.11" />
+    <Reference Include="RhinoGaussianSplatting">
+      <HintPath>ThirdParty\RhinoGaussianSplatting.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="WebP.Net">
+      <HintPath>ThirdParty\WebP.Net.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Content Include="ThirdParty\libwebp.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>libwebp.dll</TargetPath>
+    </Content>
+    <Content Include="ThirdParty\libsharpyuv.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>libsharpyuv.dll</TargetPath>
+    </Content>
+  </ItemGroup>
+</Project>
