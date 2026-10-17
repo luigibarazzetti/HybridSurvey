@@ -6,6 +6,7 @@ using Eto.Forms;
 using Rhino;
 using Rhino.Commands;
 using Rhino.DocObjects;
+using Command = Rhino.Commands.Command;
 
 namespace HybridSnap;
 
